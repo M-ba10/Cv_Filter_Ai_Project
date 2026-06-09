@@ -16,3 +16,4 @@ langdetect
 fpdf
 torch
 transformers
+fpdf2

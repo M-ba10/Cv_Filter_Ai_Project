@@ -6,6 +6,7 @@ from scoring.matching import compute_skill_match
 from scoring.ranking import calculate_global_score
 from scoring.advanced_matching import compute_domain_match, compute_language_match, compute_certification_match, compute_education_match
 from summary.summarizer import generate_summary
+from reports.pdf_generator import generate_pdf_report
 
 
 
@@ -275,6 +276,7 @@ def render_ui():
             )
 
             results.append({
+                "name": candidate_name,
                 "filename": cv["filename"],
                 "score": global_score,
                 "email": email,
@@ -300,7 +302,7 @@ def render_ui():
             col1, col2 = st.columns(2)
 
             with col1:
-
+                st.write(f"👤 Nom : {candidate_name}")
                 st.write(f"📧 Email : {email}")
                 st.write(f"📱 Téléphone : {phone}")
                 st.write(f"🎓 Niveau : {education_found}")
@@ -326,52 +328,29 @@ def render_ui():
 
         st.markdown("🏆 Classement des candidats")
         for rank,  candidate in enumerate(results, start=1):
-            # st.markdown(
-            #     f"**{rank}. {candidate['filename']}"
-            # )
-            # st.metric(
-            #     "Score de pertinence",
-            #     f"{candidate['score']}%100"
-            # )
+           
 
             summary = generate_summary(candidate)
 
-            # st.progress(candidate['score'] / 100)
-            # # st.write(
-            # #     f"📧 Email : {candidate['email']}"
-            # # )
-            # # st.write(
-            # #     f"📱 Téléphone : {candidate['phone']}"
-            # # )
-            # st.write(
-            #     f"🎓 Éducation : {candidate['education']}"
-            # )
-            # st.write(
-            #     f"💼 Expérience : {candidate['experience']} ans"
-            # )
-            # st.write(
-            #     f"🛠️ Compétences : {', '.join(candidate['skills'])}"
-            # )
-            # st.write(
-            #     f"🌍 Langues : {', '.join(candidate['languages'])}"
-            # )
-            # st.write(
-            #     f"📜 Certifications : {', '.join(candidate['certifications'])}"
-            # )
-
-            # st.markdown("---")
-
+            candidate["strengths"] = summary["strengths"]
+            candidate["warnings"] = summary["warnings"]
 
             st.markdown(
                 f"## 🏆 {rank}. {candidate['filename']}"
             )
 
-            st.metric(
-                "Score de Pertinence",
-                f"{candidate['score']}/100"
+            st.markdown(
+
+                f"👤 Nom : {candidate_name}"
             )
 
-            st.progress(candidate["score"] / 100)
+            st.metric(
+                "Score de Pertinence",
+                f"{candidate['score']}"
+            )
+
+
+            st.progress(float(candidate["score"]) / 100) 
 
             st.markdown(f"🏆 {candidate['candidate_name']}")
 
@@ -412,6 +391,18 @@ def render_ui():
                 st.warning(item)
 
             st.markdown("---")
+        
+        report_path = "reports/rapport_cv.pdf"    
+
+        generate_pdf_report(results, report_path)
+
+        with open(report_path, "rb") as f:
+            st.download_button(
+                label = "📥 Télécharger le rapport PDF",
+                data = f,
+                file_name="rapport_cv.pdf",
+                mime="application/pdf"
+            )
             
 
 
