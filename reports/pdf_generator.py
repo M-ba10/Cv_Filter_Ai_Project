@@ -25,14 +25,15 @@ def generate_pdf_report(results, output_path):
  
     pdf = PDFReport()
 
-    pdf.add_font(
-            "DejaVu",
-            "",
-            "fonts/DejaVuSans.ttf",
-            uni=True
-    )
+    # pdf.add_font(
+    #         "DejaVu",
+    #         "",
+    #         "fonts/DejaVuSans.ttf",
+    #         uni=True
+    # )
 
-    pdf.set_font("DejaVu", "", 11)
+    # pdf.set_font("DejaVu", "", 11)
+    pdf.set_font("Helvetica", "", 11)
 
 
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -53,42 +54,21 @@ def generate_pdf_report(results, output_path):
     for rank, candidate in enumerate(results, start=1):
 
         pdf.set_font("Helvetica", "B", 13)
+        name = str(candidate.get("name", "Candidat Inconnu"))[:80]
 
         pdf.multi_cell(
             0,
             8,
             f"{rank}. {candidate['name']}"
-        )
+        )  
 
-       # pdf.set_font("Helvetica", "", 11)
+        pdf.ln(2)
+
+        pdf.set_x(10)  # Indentation pour le contenu du candidat
+
+        pdf.set_font("Helvetica", "", 11)
         
-        # pdf.multi_cell(
-        #     0,
-        #     7,
-        #     f"""
-
-
-        #     Score de pertinence : {candidate['score']}/100
-
-        #     Niveau d'études : {candidate['education']}
-        #     Expérience : {candidate['experience']} ans
-
-        #     Compétences :
-        #     {', '.join(candidate['skills'])}
-
-        #     Langues :
-        #     {', '.join(candidate['languages'])}
-
-        #     Certifications :
-        #     {', '.join(candidate['certifications'])}
-
-        #     Points forts :
-        #     {', '.join(candidate['strengths'])}
-
-        #     Points de vigilance :
-        #     {', '.join(candidate['warnings'])}
-        # """
-        # )
+       
         content = (
             f"Score de pertinence : {candidate['score']}/100\n\n"
             f"Niveau d'etudes : {candidate['education']}\n"
@@ -99,8 +79,9 @@ def generate_pdf_report(results, output_path):
             f"Points forts : {', '.join(candidate['strengths'])}\n\n"
             f"Points de vigilance : {', '.join(candidate['warnings'])}"
         )
+        pdf.set_x(10)  # Réinitialiser l'indentation pour le contenu du candidat
 
-        pdf.multi_cell(190, 7, content)
+        pdf.multi_cell(180, 7, content)
 
 
         pdf.ln(5)

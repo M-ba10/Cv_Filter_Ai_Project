@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from extraction.extractor_manager import extract_text
 from nlp.entity_extraction import extract_certifications, extract_education, extract_email, extract_experience, extract_languages, extract_phone, extract_skills, extract_candidate_name
@@ -7,6 +8,14 @@ from scoring.ranking import calculate_global_score
 from scoring.advanced_matching import compute_domain_match, compute_language_match, compute_certification_match, compute_education_match
 from summary.summarizer import generate_summary
 from reports.pdf_generator import generate_pdf_report
+from nlp.advanced_extraction import (
+    extract_location,
+    extract_availability,
+    extract_contract_type,
+    extract_sector
+)
+import plotly.express as px
+from analytics.dashboard import build_dataframe, get_skills_frequency, get_languages_frequency
 
 
 
@@ -200,7 +209,8 @@ def render_ui():
             })
 
         st.success("Extraction terminée.")
-
+        
+        results = []
         for cv in all_cv_texts:
 
             st.markdown(f"### 📄 {cv['filename']}")
@@ -212,7 +222,11 @@ def render_ui():
             # )
 
             text = cv["text"]
-            results = []
+            
+            location_found = extract_location(text)
+            availability_found = extract_availability(text)
+            contract_type_found = extract_contract_type(text)
+            sector_found = extract_sector(text)
 
             email = extract_email(text)
             phone = extract_phone(text)
@@ -272,7 +286,7 @@ def render_ui():
                 education_score,
                 language_score,
                 certification_score,
-                domain_score
+                domain_score 
             )
 
             results.append({
@@ -286,7 +300,11 @@ def render_ui():
                 "experience": experience_found,
                 "education": education_found,
                 "certifications": certifications_found,
-                "candidate_name": candidate_name
+                "candidate_name": candidate_name,
+                "location": location_found,
+                "availability": availability_found,
+                "contract_type": contract_type_found,
+                "sector": sector_found
 
             })
 
@@ -313,10 +331,15 @@ def render_ui():
                 st.write(f"🛠️ Compétences : {', '.join(skills_found)}")
                 st.write(f"🌍 Langues : {', '.join(languages_found)}")
                 st.write(f"📜 Certifications : {', '.join(certifications_found)}")
+                st.write(f"📍 Localisation : {location_found}")
+                st.write(f"🕒 Disponibilité : {availability_found}")
+                st.write(f"💼 Type de contrat : {contract_type_found}")
+                st.write(f"📊 Secteur : {sector_found}")
 
 
                 
-        
+        print(len(results))
+        print(results)
         # Tri des résultats par score
         results = sorted(
             results,
@@ -396,16 +419,140 @@ def render_ui():
 
         generate_pdf_report(results, report_path)
 
+        # with open(report_path, "rb") as f:
+
+        #     st.download_button(
+        #         label = "📥 Télécharger le rapport PDF",
+        #         data = f,
+        #         file_name="rapport_cv.pdf",
+        #         mime="application/pdf"
+        #     )
+
+        st.markdown("### 📊 Dashboard Analytics")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "CV Analysés",
+                len(results)
+            )
+
+        with col2:
+            avg_score = round(
+                sum(
+                    candidate["score"]
+                    for candidate in results
+                ) / len(results),
+                2
+            )
+
+            st.metric(
+                "Score Moyen",
+                avg_score
+            )
+
+        with col3:
+
+            best_candidate = max(
+                results,
+                key=lambda x: x["score"]
+            )
+
+            st.metric(
+                "Meilleur Score",
+                best_candidate["score"]
+            )
+
+        with col4:
+
+            st.metric(
+                "Top Candidat",
+                best_candidate["name"]
+            )
+        df = build_dataframe(results)
+        st.dataframe(df, use_container_width=True)
+
+        fig = px.bar(
+            df,
+            x="Nom",
+            y="Score",
+            title="Classement des Candidats",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        education_counts = (
+            df["Education"]
+            .value_counts()
+            .reset_index()
+        )
+
+        education_counts.columns = [
+            "Education",
+            "Count"
+        ]
+
+        fig = px.pie(
+            education_counts,
+            names="Education",
+            values="Count",
+            title="Répartition des niveaux d'études"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        skills_counter = get_skills_frequency(results)
+
+        skills_df = pd.DataFrame(
+            skills_counter.items(),
+            columns=["Compétence", "Nombre"]
+        )
+
+        skills_df = skills_df.sort_values(
+            "Nombre",
+            ascending=False
+        ).head(10)
+        
+        fig = px.bar(
+            skills_df,
+            x="Compétence",
+            y="Nombre",
+            title="Top 10 Compétences"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+        languages_counter = get_languages_frequency(results)
+
+        languages_df = pd.DataFrame(
+            languages_counter.items(),
+            columns=["Langue", "Nombre"]
+        )
+        # languages_df = languages_df.sort_values(
+        #     "Nombre",
+        #     ascending=False
+        # ).head(10)
+
+        fig = px.bar(
+            languages_df,
+            x="Langue",
+            y="Nombre",
+            title=" Langues detectées"
+        )
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+        
         with open(report_path, "rb") as f:
+
             st.download_button(
                 label = "📥 Télécharger le rapport PDF",
                 data = f,
                 file_name="rapport_cv.pdf",
                 mime="application/pdf"
             )
-            
-
-
-            
-
-            
